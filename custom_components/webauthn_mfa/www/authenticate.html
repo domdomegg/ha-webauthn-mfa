@@ -100,6 +100,15 @@
       el.className = `status ${type}`;
     }
 
+    // A flow that no longer exists (Home Assistant restarted, or the page was
+    // reopened with the back button) can only be fixed by starting again.
+    function errorMessage(data, fallback) {
+      if (data && data.error === "unknown_flow") {
+        return T.flowExpired;
+      }
+      return (data && (data.message || data.error)) || fallback;
+    }
+
     function setLoading(loading) {
       const btn = document.getElementById("btn-auth");
       btn.disabled = loading;
@@ -169,7 +178,7 @@
         const options = await challengeRes.json();
 
         if (!challengeRes.ok) {
-          setStatus(options.message || options.error || T.serverError, "error");
+          setStatus(errorMessage(options, T.serverError), "error");
           setLoading(false);
           return;
         }
@@ -228,7 +237,12 @@
             window.location.href = getSafeReturnUrl("/auth/authorize");
           }, 300);
         } else {
-          setStatus(`${T.failed}: ${verifyData.error || T.unknown}`, "error");
+          setStatus(
+            verifyData.error === "unknown_flow"
+              ? T.flowExpired
+              : `${T.failed}: ${verifyData.error || T.unknown}`,
+            "error"
+          );
           setLoading(false);
         }
 
